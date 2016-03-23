@@ -28,6 +28,7 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -91,7 +92,7 @@ thread_init (void)
 
   lock_init (&tid_lock);
   list_init (&ready_list);
-
+ 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -210,11 +211,11 @@ thread_create (const char *name, int priority,
    primitives in synch.h. */
 void
 thread_block (void) 
-{
+{ 
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
 
-  thread_current ()->status = THREAD_BLOCKED;
+  thread_current()->status = THREAD_BLOCKED;
   schedule ();
 }
 
@@ -230,15 +231,17 @@ void
 thread_unblock (struct thread *t) 
 {
   enum intr_level old_level;
-
+  
   ASSERT (is_thread (t));
-
+  
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
+
+
 
 /* Returns the name of the running thread. */
 const char *
@@ -551,7 +554,16 @@ allocate_tid (void)
 
   return tid;
 }
-
+
+bool
+thread_cmp (const struct list_elem * a, const struct list_elem * b, void *aux UNUSED)
+{ 
+  struct thread * a_thread = list_entry(a, struct thread, elem);
+  struct thread * b_thread = list_entry(b, struct thread, elem);
+
+  return a_thread->sleeping_time < b_thread->sleeping_time ? true: false;
+}
+
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
