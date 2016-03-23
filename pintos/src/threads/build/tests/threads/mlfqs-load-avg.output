@@ -1,4 +1,4 @@
-Writing command line to /tmp/VxpFLBuCgN.dsk...
+Writing command line to /tmp/i1Hs1tO9SS.dsk...
 warning: can't find squish-pty, so terminal input will fail
 bochs -q
 Kernel command line: -q -mlfqs run mlfqs-load-avg
@@ -104,7 +104,7 @@ Executing 'mlfqs-load-avg':
 (mlfqs-load-avg) end
 Execution of 'mlfqs-load-avg' complete.
 Timer: 18849 ticks
-Thread: 6430 idle ticks, 12423 kernel ticks, 0 user ticks
+Thread: 6466 idle ticks, 12387 kernel ticks, 0 user ticks
 Console: 5389 characters output
 Keyboard: 0 keys pressed
 Powering off...

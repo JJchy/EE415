@@ -561,7 +561,7 @@ thread_cmp (const struct list_elem * a, const struct list_elem * b, void *aux UN
   struct thread * a_thread = list_entry(a, struct thread, elem);
   struct thread * b_thread = list_entry(b, struct thread, elem);
 
-  return a_thread->sleeping_time < b_thread->sleeping_time ? true: false;
+  return a_thread->wakeup_time < b_thread->wakeup_time ? true: false;
 }
 
 /* Offset of `stack' member within `struct thread'.
