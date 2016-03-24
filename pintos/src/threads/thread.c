@@ -532,7 +532,8 @@ schedule_tail (struct thread *prev)
    completed. */
 static void
 schedule (void) 
-{
+{  
+  list_sort (&ready_list, thread_priority_cmp, NULL);
   struct thread *curr = running_thread ();
   struct thread *next = next_thread_to_run ();
   struct thread *prev = NULL;
@@ -544,7 +545,6 @@ schedule (void)
   if (curr != next)
     prev = switch_threads (curr, next);
   schedule_tail (prev); 
-  list_sort (&ready_list, thread_priority_cmp, NULL);
 }
 
 /* Returns a tid to use for a new thread. */
