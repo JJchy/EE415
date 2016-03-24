@@ -200,6 +200,9 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  if (thread_get_priority() < priority)
+    thread_yield();
+
   return tid;
 }
 
@@ -237,7 +240,8 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
-  t->status = THREAD_READY;
+  t->status = THREAD_READY; 
+  list_sort (&ready_list, thread_priority_cmp, NULL);
   intr_set_level (old_level);
 }
 
@@ -317,7 +321,8 @@ thread_yield (void)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  thread_current ()->priority = new_priority; 
+  thread_yield ();
 }
 
 /* Returns the current thread's priority. */
@@ -539,6 +544,7 @@ schedule (void)
   if (curr != next)
     prev = switch_threads (curr, next);
   schedule_tail (prev); 
+  list_sort (&ready_list, thread_priority_cmp, NULL);
 }
 
 /* Returns a tid to use for a new thread. */
@@ -556,7 +562,7 @@ allocate_tid (void)
 }
 
 bool
-thread_cmp (const struct list_elem * a, const struct list_elem * b, void *aux UNUSED)
+thread_time_cmp (const struct list_elem * a, const struct list_elem * b, void *aux UNUSED)
 { 
   struct thread * a_thread = list_entry(a, struct thread, elem);
   struct thread * b_thread = list_entry(b, struct thread, elem);
@@ -564,6 +570,15 @@ thread_cmp (const struct list_elem * a, const struct list_elem * b, void *aux UN
   return a_thread->wakeup_time < b_thread->wakeup_time ? true: false;
 }
 
+
+bool
+thread_priority_cmp (const struct list_elem * a, const struct list_elem * b, void *aux UNUSED)
+{ 
+  struct thread * a_thread = list_entry(a, struct thread, elem);
+  struct thread * b_thread = list_entry(b, struct thread, elem);
+
+  return a_thread->priority > b_thread->priority ? true: false;
+}
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
