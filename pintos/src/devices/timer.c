@@ -7,7 +7,8 @@
 #include "threads/io.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
-  
+#include "threads/fixed_point.h"
+
 /* See [8254] for hardware details of the 8254 timer chip. */
 
 #if TIMER_FREQ < 19
@@ -17,6 +18,7 @@
 #error TIMER_FREQ <= 1000 recommended
 #endif
 
+static struct list sleep_list;
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
@@ -42,6 +44,8 @@ timer_init (void)
   outb (0x43, 0x34);    /* CW: counter 0, LSB then MSB, mode 2, binary. */
   outb (0x40, count & 0xff);
   outb (0x40, count >> 8);
+
+  list_init (&sleep_list);
 
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
 }
@@ -99,8 +103,14 @@ timer_sleep (int64_t ticks)
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  struct thread *t = thread_current();
+  enum intr_level old_level = intr_disable();
+  t->wakeup_time = start + ticks;
+  list_push_back (&sleep_list, &t->elem);
+  list_sort (&sleep_list, thread_time_cmp, NULL); 
+  thread_block();
+  
+  intr_set_level(old_level);
 }
 
 /* Suspends execution for approximately MS milliseconds. */
@@ -124,19 +134,61 @@ timer_nsleep (int64_t ns)
   real_time_sleep (ns, 1000 * 1000 * 1000);
 }
 
-/* Prints timer statistics. */
+ /* Prints timer statistics. */
 void
 timer_print_stats (void) 
 {
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
-
+
+/* Decrement the sleeping thread's time elapse
+ * to wake up */
+void
+sleep_count (void)
+{ 
+  enum intr_level old_level = intr_disable ();
+  if(list_empty(&sleep_list)) return;
+  struct list_elem * e = list_begin(&sleep_list);
+  struct thread *t;
+
+  int64_t start = timer_ticks ();
+  
+  e = list_begin(&sleep_list);
+  t = list_entry(e, struct thread, elem);
+  while(t->wakeup_time <= start)
+    {
+      e = list_next(e);
+      list_remove(&t->elem);
+      thread_unblock(t);
+      if (e == list_end (&sleep_list))
+        break;
+      t = list_entry(e, struct thread, elem);
+    }
+  intr_set_level (old_level);
+}
+
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
-{
+{ 
   ticks++;
+  enum intr_level old_level;
   thread_tick ();
+  sleep_count ();
+  if (thread_mlfqs)
+    { 
+      old_level = intr_disable ();
+
+      if (ticks % TIMER_FREQ == 0)
+        {
+          calc_load_avg ();
+          calc_sec ();
+        }
+      
+      if (ticks % 4 == 3)
+        calc_4tick ();
+      intr_set_level (old_level);
+    }
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
@@ -201,4 +253,3 @@ real_time_sleep (int64_t num, int32_t denom)
       busy_wait (loops_per_tick * num / 1000 * TIMER_FREQ / (denom / 1000)); 
     }
 }
-

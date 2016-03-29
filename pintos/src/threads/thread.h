@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/fixed_point.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -88,7 +89,14 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    struct list lock_list;
+    struct lock *lock_wait;
+    int origin_priority;
     
+    int nice;
+    f_p recent_cpu;
+    struct list_elem all_elem;
+
     int64_t wakeup_time;			/* Wakeup time. */
 
     /* Shared between thread.c and synch.c. */
@@ -129,11 +137,20 @@ void thread_yield (void);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
+void thread_donation (struct thread *give, struct thread *take);
 
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+void calc_priority (struct thread *thread);
+void calc_recent_cpu (struct thread *thread);
+void calc_load_avg (void);
+void calc_sec (void);
+void calc_4tick (void);
+
+void thread_rollback (struct thread *thread);
 
 bool thread_time_cmp(const struct list_elem *a,
                      const struct list_elem *b, 
@@ -142,4 +159,5 @@ bool thread_time_cmp(const struct list_elem *a,
 bool thread_priority_cmp(const struct list_elem *a,
                          const struct list_elem *b, 
                          void * aux UNUSED); 
+
 #endif /* threads/thread.h */
