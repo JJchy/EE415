@@ -7,7 +7,7 @@
 #include "threads/io.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
-#include "threads/fixed_point.h"
+#include "threads/fixed_point.h" // For fixed_point calculation.
 
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -18,7 +18,7 @@
 #error TIMER_FREQ <= 1000 recommended
 #endif
 
-static struct list sleep_list;
+static struct list sleep_list;//
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
@@ -45,7 +45,8 @@ timer_init (void)
   outb (0x40, count & 0xff);
   outb (0x40, count >> 8);
 
-  list_init (&sleep_list);
+  list_init (&sleep_list); // My implementation
+                           // initialize the sleep_list
 
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
 }
@@ -96,17 +97,23 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
-/* Suspends execution for approximately TICKS timer ticks. */
+
+/* Suspends execution for approximately TICKS timer ticks. 
+   Check the current time and save when to wakeup by adding ticks*/
 void
-timer_sleep (int64_t ticks) 
+timer_sleep (int64_t ticks)
 {
+
+  /* My Implementation */
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
   struct thread *t = thread_current();
+  t->wakeup_time = start + ticks; 
   enum intr_level old_level = intr_disable();
-  t->wakeup_time = start + ticks;
   list_push_back (&sleep_list, &t->elem);
+
+  // sort to make waking up in order
   list_sort (&sleep_list, thread_time_cmp, NULL); 
   thread_block();
   
@@ -141,14 +148,18 @@ timer_print_stats (void)
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
 
-/* Decrement the sleeping thread's time elapse
- * to wake up */
+
+/* My Implementation */
+/* Check the current time and thread's wakeup_time.
+ * If current time reaches to wakeup_time, wakeup
+ * the thread in the sleep_list.*/
 void
 sleep_count (void)
 { 
   enum intr_level old_level = intr_disable ();
+  // prevent error from timer_interrupt
   if(list_empty(&sleep_list)) return;
-  struct list_elem * e = list_begin(&sleep_list);
+  struct list_elem * e;
   struct thread *t;
 
   int64_t start = timer_ticks ();
@@ -167,13 +178,23 @@ sleep_count (void)
   intr_set_level (old_level);
 }
 
-/* Timer interrupt handler. */
+/* Timer interrupt handler. 
+ * Every interrupt, check the sleep_list using
+ * sleep_count function to wake up the threads.  
+ *
+ * For mlfq scheduler, every 100 ticks, calculate
+ * the load_average and thread's recent_cpu.
+ * And every 4 ticks, calculate the priority of 
+ * all threads                                  */
+
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 { 
   ticks++;
   enum intr_level old_level;
   thread_tick ();
+
+  /* My implementation */
   sleep_count ();
   if (thread_mlfqs)
     { 

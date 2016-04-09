@@ -1,0 +1,31 @@
+Writing command line to /tmp/ukASBLG9E5.dsk...
+warning: can't find squish-pty, so terminal input will fail
+bochs -q
+Kernel command line: -q -mlfqs run mlfqs-nice-10
+Pintos booting with 4,096 kB RAM...
+374 pages available in kernel pool.
+374 pages available in user pool.
+Calibrating timer...  102,400 loops/s.
+Boot complete.
+Executing 'mlfqs-nice-10':
+(mlfqs-nice-10) begin
+(mlfqs-nice-10) Starting 10 threads...
+(mlfqs-nice-10) Starting threads took 43 ticks.
+(mlfqs-nice-10) Sleeping 40 seconds to let threads run, please wait...
+(mlfqs-nice-10) Thread 0 received 680 ticks.
+(mlfqs-nice-10) Thread 1 received 585 ticks.
+(mlfqs-nice-10) Thread 2 received 497 ticks.
+(mlfqs-nice-10) Thread 3 received 400 ticks.
+(mlfqs-nice-10) Thread 4 received 316 ticks.
+(mlfqs-nice-10) Thread 5 received 228 ticks.
+(mlfqs-nice-10) Thread 6 received 157 ticks.
+(mlfqs-nice-10) Thread 7 received 93 ticks.
+(mlfqs-nice-10) Thread 8 received 41 ticks.
+(mlfqs-nice-10) Thread 9 received 9 ticks.
+(mlfqs-nice-10) end
+Execution of 'mlfqs-nice-10' complete.
+Timer: 4171 ticks
+Thread: 987 idle ticks, 3187 kernel ticks, 0 user ticks
+Console: 995 characters output
+Keyboard: 0 keys pressed
+Powering off...

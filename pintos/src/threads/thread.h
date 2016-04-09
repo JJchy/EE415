@@ -4,6 +4,9 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+
+/* My implementation */
+// To calculate the fixed_point arithmetic problem.
 #include "threads/fixed_point.h"
 
 /* States in a thread's life cycle. */
@@ -89,13 +92,16 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    struct list lock_list;
-    struct lock *lock_wait;
-    int origin_priority;
-    
-    int nice;
-    f_p recent_cpu;
-    struct list_elem all_elem;
+
+
+    /* My Implementation  */
+    struct list lock_list;              /* List of locks whose holder is this thread. */
+    struct lock *lock_wait;             /* List of locks the thread is waiting for. */
+    int origin_priority;                /* the priority thread has when created. */    
+    int nice;                           /* Thread's nice value (mlfqs) */
+    fixedp_t recent_cpu;                /* Thread's recent_cpu value(mlfqs) */  
+    struct list_elem all_elem;          /* All_List element */
+    /* My implementation  */
 
     int64_t wakeup_time;			/* Wakeup time. */
 

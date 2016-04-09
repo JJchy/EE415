@@ -116,7 +116,11 @@ sema_up (struct semaphore *sema)
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters))
     {
+      /* My Implementation */
+      // sort the waiters list to find which thread
+      // has the highest priority (to unblock)
       list_sort (&sema->waiters, thread_priority_cmp, NULL);
+
       thread_unblock (list_entry (list_pop_front (&sema->waiters),
                                   struct thread, elem));
     }
@@ -194,7 +198,12 @@ lock_init (struct lock *lock)
    This function may sleep, so it must not be called within an
    interrupt handler.  This function may be called with
    interrupts disabled, but interrupts will be turned back on if
-   we need to sleep. */
+   we need to sleep. 
+   
+   If the thread which wants a lock has higher priority than
+   lock holder, call thread_donation function, and wait for the lock
+    (for MLFQS, thread_donation should be blocked) */
+
 void
 lock_acquire (struct lock *lock)
 {
@@ -205,15 +214,16 @@ lock_acquire (struct lock *lock)
   struct thread *take = lock->holder;
   struct thread *give = thread_current ();
   
-  give->lock_wait = lock;
-  if (take!=NULL && give->priority >= take->priority)
-    {
-      if(!thread_mlfqs)
-       thread_donation (give, take);
-    }
-  sema_down (&lock->semaphore);
-  give->lock_wait = NULL;
 
+  /* My Implementation */
+  give->lock_wait = lock;
+
+  if (take!=NULL && give->priority >= take->priority)
+    thread_donation (give, take);
+
+  sema_down (&lock->semaphore);
+  
+  give->lock_wait = NULL;
   list_push_back (&give->lock_list, &lock->elem);
   lock->holder = give;
 }
@@ -245,17 +255,23 @@ lock_try_acquire (struct lock *lock)
 
    An interrupt handler cannot acquire a lock, so it does not
    make sense to try to release a lock within an interrupt
-   handler. */
+   handler. 
+   
+   If the lock released, donated priority should be changed
+   into original priority or another donated priority by other
+   locks. Therefore, call thread_rollback function to handle
+   this.                                                    */
 void
 lock_release (struct lock *lock) 
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread(lock));
 
-  //struct thread *t = thread_current ();
   list_remove (&lock->elem);
-  if(!thread_mlfqs)
-    thread_rollback (lock->holder);
+  
+  /* My implementation */
+  thread_rollback (lock->holder);
+
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
@@ -276,7 +292,7 @@ struct semaphore_elem
   {
     struct list_elem elem;              /* List element. */
     struct semaphore semaphore;         /* This semaphore. */
-    int priority;
+    int priority;  // My implement (to sort the semaphore_elem)
   };
 
 /* compare each priority, return boolean. */
@@ -330,7 +346,10 @@ cond_wait (struct condition *cond, struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   sema_init (&waiter.semaphore, 0);
+
+  // My Implementation (to sort semaphore_elem)
   waiter.priority = lock->holder->priority;
+
   list_insert_ordered (&cond->waiters, &waiter.elem, lock_priority_cmp, NULL);
   lock_release (lock);
   sema_down (&waiter.semaphore);
